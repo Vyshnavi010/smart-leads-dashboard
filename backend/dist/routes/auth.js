@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_js_1 = require("../controllers/auth.js");
+const auth_js_2 = require("../middleware/auth.js");
+const router = (0, express_1.Router)();
+router.post('/register', auth_js_1.register);
+router.post('/login', auth_js_1.login);
+router.get('/profile', auth_js_2.requireAuth, auth_js_1.getProfile);
+exports.default = router;

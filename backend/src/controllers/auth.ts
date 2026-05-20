@@ -1,0 +1,123 @@
+import { Request, Response } from 'express';
+import User from '../models/user.js';
+import { generateToken, hashPassword, comparePassword } from '../utils/auth.js';
+import { AuthenticatedRequest } from '../types/index.js';
+
+export const register = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password) {
+      res.status(400).json({ success: false, message: 'All fields (name, email, password) are required' });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      res.status(400).json({ success: false, message: 'Invalid email format' });
+      return;
+    }
+
+    if (password.length < 6) {
+      res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+      return;
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      res.status(409).json({ success: false, message: 'User with this email already exists' });
+      return;
+    }
+
+    const requestedRole = role === 'Admin' ? 'Admin' : 'Sales User';
+
+    const passwordHash = await hashPassword(password);
+    const newUser = new User({
+      name,
+      email,
+      passwordHash,
+      role: requestedRole,
+    });
+
+    await newUser.save();
+
+    const token = generateToken(newUser._id.toString(), newUser.role);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+        },
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Server error during registration' });
+  }
+};
+
+export const login = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({ success: false, message: 'Email and password are required' });
+      return;
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return;
+    }
+
+    const isMatch = await comparePassword(password, user.passwordHash);
+    if (!isMatch) {
+      res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return;
+    }
+
+    const token = generateToken(user._id.toString(), user.role);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Server error during login' });
+  }
+};
+
+export const getProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Not authenticated' });
+      return;
+    }
+
+    const user = await User.findById(req.user.userId).select('-passwordHash');
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Server error retrieving profile' });
+  }
+};
