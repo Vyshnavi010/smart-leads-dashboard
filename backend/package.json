@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rimraf dist && tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+    "dev": "tsx watch src/server.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -24,6 +24,7 @@
     "@types/node": "^20.12.7",
     "rimraf": "^5.0.5",
     "ts-node-dev": "^2.0.0",
+    "tsx": "^4.22.3",
     "typescript": "^5.4.5"
   }
 }

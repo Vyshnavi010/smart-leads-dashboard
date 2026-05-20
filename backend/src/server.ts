@@ -1,7 +1,14 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import dns from 'dns';
 import app from './app.js'; // Note: NodeNext resolution expects extension or TS resolves with JS
 
+dns.setDefaultResultOrder('ipv4first');
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  console.warn('Failed to set custom DNS servers, using system default:', e);
+}
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
